@@ -24,7 +24,7 @@
   </head>
   <body>
     <div id="info">
-      Draw with your mouse! Other users appear in red.<br />
+      Draw with your mouse! <br />
       Open in multiple tabs to test multiplayer.
     </div>
 
@@ -36,60 +36,108 @@
 
     <!-- p5.js sketch -->
     <script>
-      // Connect to the Socket.IO server (auto-connects to current origin)
       var socket = io();
-      let name = "Blob";
-      function setup() {
-        createCanvas(windowWidth, windowHeight);
-        background(255);
+let myPicker;
+let slider;
+let isEraserActive = false;
+let banner;
+let canvas;
+let canvasX, canvasY;
+function setup() 
+{
+  canvas = createCanvas(500, 500);
+  background(245);
 
-        // Listen for drawing events from other users
+	// Listen for drawing events from other users
         socket.on("iamdrawing", someoneIsDrawing);
 
         // Listen for new user join notifications
         socket.on("hello!", someoneJoined);
 
-        name = prompt("Name for your blob?");
+        name = prompt("Name?");
         // player.debug = true;
         if (name == null || name == "") {
-          name = "Blob";
+          name = "Player";
         }
         // Announce our presence to the server
         socket.emit("hello!", name);
-      }
+  
+  fill(255);
+  let banner = rect(0,0,500,75);
+  canvasX = canvas.position().x;
+  canvasY = canvas.position().y;
+  // setInterval(timeIt, 1000);
+  
+  myPicker = createColorPicker('black');
+  myPicker.position(canvasX + 100,canvasY + 7);
+  
+  slider = createSlider(1, 10);
+  slider.position(canvasX + 5,canvasY +  10);
+  slider.size(80);
+  
+  // Create an eraser button
+  let eraserButton = createButton('Eraser: OFF');
+  eraserButton.position(canvasX + 10,canvasY +  45);
+  eraserButton.mousePressed(toggleEraser);
+  
+  let clearButton = createButton('Clear');
+  clearButton.position(canvasX + 435,canvasY +  10);
+  clearButton.mousePressed(clearPress);
+  
+}
 
-      function draw() {
-        // Only draw when mouse is pressed and moving
-        if (mouseIsPressed && (mouseX !== pmouseX || mouseY !== pmouseY)) {
-          // Draw locally (dark gray)
-          noStroke();
-          fill(30, 30, 30, 90);
-          var radius =
-            Math.abs(mouseX - pmouseX) / 3 + Math.abs(mouseY - pmouseY) / 3;
-          ellipse(mouseX, mouseY, radius, radius);
+function draw() 
+{
+  console.log(mouseX)
+  let o = myPicker.color();
+  stroke(o);
+  
+  let p = slider.value();
+  strokeWeight(p);
+  
+  if (mouseIsPressed && mouseY > 80) 
+  {
+    if (isEraserActive) 
+    {
+      // Erase by drawing with the background color
+      stroke(245); // Assuming background is white
+      line(pmouseX, pmouseY, mouseX, mouseY);
+    } else 
+    {
+      // Draw a line using the color picker
+      line(pmouseX, pmouseY, mouseX, mouseY);
+    }
+  }
+	socket.emit("iamdrawing", pmouseX, pmouseY, mouseX, mouseY, p, name);
+}
 
-          // Send drawing data to server
-          socket.emit("iamdrawing", mouseX, mouseY, radius, name);
-        }
-      }
+function toggleEraser() 
+{
+  isEraserActive = !isEraserActive;
+  // Change the button text based on the state
+  this.html(isEraserActive ? 'Eraser: ON' : 'Eraser: OFF');
+}
 
-      // This function is called when another user draws
-      function someoneIsDrawing(x, y, r, name) {
-        noStroke();
-        fill(255, 0, 0, 90); // Red for other users
-        ellipse(x, y, r, r);
-        text(name, x, y);
-      }
+function clearPress() {
+  background(245);
+  fill(255);
+  strokeWeight(1);
+  stroke(0);
+  let banner = rect(0,0,500,75);
+}
 
-      // This function is called when a new user joins
-      function someoneJoined() {
-        console.log("New user joined!");
-      }
+function someoneIsDrawing(x, y, r, name) {
+    noStroke();
+    fill(255, 0, 0, 90); // Red for other users
+    ellipse(x, y, r, r);
+    text(name, x, y);
+}
 
-      // Resize canvas when window is resized
-      function windowResized() {
-        resizeCanvas(windowWidth, windowHeight);
-      }
+function someoneJoined() {
+    console.log("New user joined!");
+}
+
     </script>
   </body>
 </html>
+
